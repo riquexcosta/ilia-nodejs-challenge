@@ -16,7 +16,11 @@ const sign = (payload) =>
   jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
 
 describe('Users Service - Auth and CRUD', () => {
+  let server;
+
   beforeAll(async () => {
+    // Bind explicitly to localhost to avoid sandbox restrictions on 0.0.0.0
+    server = app.listen(0, '127.0.0.1');
     await sequelize.sync({ force: true });
   });
 
@@ -25,11 +29,14 @@ describe('Users Service - Auth and CRUD', () => {
   });
 
   afterAll(async () => {
+    if (server) {
+      await new Promise((resolve) => server.close(resolve));
+    }
     await sequelize.close();
   });
 
   test('registers a user and returns basic info', async () => {
-    const res = await request(app)
+    const res = await request(server)
       .post('/api/users')
       .send({
         first_name: 'John',
@@ -49,14 +56,14 @@ describe('Users Service - Auth and CRUD', () => {
 
   test('authenticates a user and returns a token', async () => {
     // create user first
-    await request(app).post('/api/users').send({
+    await request(server).post('/api/users').send({
       first_name: 'John',
       last_name: 'Doe',
       email: 'john@example.com',
       password: 'password123',
     });
 
-    const res = await request(app).post('/api/auth').send({
+    const res = await request(server).post('/api/auth').send({
       email: 'john@example.com',
       password: 'password123',
     });
@@ -67,7 +74,7 @@ describe('Users Service - Auth and CRUD', () => {
   });
 
   test('gets, updates, and deletes a user with valid token', async () => {
-    const createRes = await request(app).post('/api/users').send({
+    const createRes = await request(server).post('/api/users').send({
       first_name: 'Jane',
       last_name: 'Smith',
       email: 'jane@example.com',
@@ -77,20 +84,20 @@ describe('Users Service - Auth and CRUD', () => {
     const userId = createRes.body.id;
     const token = sign({ userId, email: 'jane@example.com' });
 
-    const getRes = await request(app)
+    const getRes = await request(server)
       .get(`/api/users/${userId}`)
       .set('Authorization', `Bearer ${token}`);
     expect(getRes.status).toBe(200);
     expect(getRes.body.email).toBe('jane@example.com');
 
-    const patchRes = await request(app)
+    const patchRes = await request(server)
       .patch(`/api/users/${userId}`)
       .set('Authorization', `Bearer ${token}`)
       .send({ first_name: 'Janet' });
     expect(patchRes.status).toBe(200);
     expect(patchRes.body.first_name).toBe('Janet');
 
-    const deleteRes = await request(app)
+    const deleteRes = await request(server)
       .delete(`/api/users/${userId}`)
       .set('Authorization', `Bearer ${token}`);
     expect(deleteRes.status).toBe(200);
