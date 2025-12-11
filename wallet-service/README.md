@@ -60,26 +60,17 @@ docker build -t wallet-service .
 docker-compose up wallet-service
 ```
 
-### Internal Endpoints
+## Endpoints
 
-#### POST /internal/transactions
-Internal endpoint for service-to-service communication. Requires internal JWT token.
+### External (client-facing, requires `PRIVATE_KEY` JWT)
+- `POST /transactions` — create transaction (`user_id`, `type` = CREDIT|DEBIT, `amount`, optional `description`)
+- `GET /transactions?type=CREDIT|DEBIT` — list authenticated user transactions
+- `GET /balance` — get authenticated user consolidated balance
 
-**Request:**
-```json
-{
-  "userId": "uuid",
-  "type": "CREDIT",
-  "amount": 100,
-  "description": "Optional description"
-}
-```
-
-#### GET /internal/transactions?userId=xxx&type=CREDIT|DEBIT
-Internal endpoint to list transactions. Requires internal JWT token.
-
-#### GET /internal/balance?userId=xxx
-Internal endpoint to get balance. Requires internal JWT token.
+### Internal (service-to-service, requires `PRIVATE_KEY_INTERNAL` JWT)
+- `POST /internal/transactions`
+- `GET /internal/transactions?userId=...&type=CREDIT|DEBIT`
+- `GET /internal/balance?userId=...`
 
 ## Features
 
@@ -90,9 +81,16 @@ Internal endpoint to get balance. Requires internal JWT token.
 
 ## Security
 
-- All routes require JWT authentication
-- Internal communication uses a different JWT key (`JWT_SECRET_INTERNAL`)
-- Input validation on all endpoints
+- External routes require JWT signed with `PRIVATE_KEY` (`ILIACHALLENGE`)
+- Internal routes require JWT signed with `PRIVATE_KEY_INTERNAL` (`ILIACHALLENGE_INTERNAL`)
+- Input validation on all endpoints (express-validator)
+
+## Tests
+
+Integration tests (sqlite in-memory):
+```bash
+npm test
+```
 
 ## Project Structure
 
@@ -100,15 +98,14 @@ Internal endpoint to get balance. Requires internal JWT token.
 wallet-service/
 ├── src/
 │   ├── config/          # Database configuration
-│   ├── controllers/      # HTTP controllers
-│   ├── middleware/       # Middlewares (auth, validators)
-│   ├── migrations/       # Database migrations
-│   ├── models/           # Sequelize models
-│   ├── routes/           # Route definitions
-│   │   ├── index.js      # Public API routes
-│   │   └── internal.js   # Internal service routes
-│   ├── services/         # Business logic
-│   └── utils/            # Utilities
+│   ├── controllers/     # HTTP controllers
+│   ├── middleware/      # Middlewares (auth, validators)
+│   ├── migrations/      # Database migrations
+│   ├── models/          # Sequelize models
+│   ├── routes/          # Route definitions (external + internal)
+│   ├── services/        # Business logic
+│   └── utils/           # Utilities
+├── __tests__/           # Integration tests (jest + supertest)
 ├── Dockerfile
 ├── package.json
 └── README.md

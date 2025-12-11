@@ -175,69 +175,24 @@ Deletes a user. Requires JWT authentication.
 }
 ```
 
-### Transactions
-
-#### POST /api/transactions
-Creates a new transaction. Requires external JWT authentication.
-
-**Request:**
-```json
-{
-  "amount": 100,
-  "type": "credit",
-  "description": "Optional description"
-}
-```
-
-**Response:**
-```json
-{
-  "id": "uuid",
-  "user_id": "uuid",
-  "type": "CREDIT",
-  "amount": 100
-}
-```
-
-#### GET /api/transactions?type=credit|debit
-Lists user transactions. Requires external JWT authentication.
-
-**Response:**
-```json
-[
-  {
-    "id": "uuid",
-    "user_id": "uuid",
-    "type": "CREDIT",
-    "amount": 100
-  }
-]
-```
-
-#### GET /api/balance
-Returns the user's consolidated balance. Requires external JWT authentication.
-
-**Response:**
-```json
-{
-  "amount": 500
-}
-```
-
 ## Integration with Wallet Service
 
-The Users Service communicates internally with the Wallet Service using internal JWT (`JWT_SECRET_INTERNAL`). When a new user is created, a wallet is automatically created for them through an internal call to the Wallet Service.
-
-Transaction endpoints in the Users Service act as a proxy, forwarding requests to the Wallet Service using internal JWT tokens.
+- When a user is created, the service calls the Wallet Service internally (using the internal JWT) to create the wallet.
+- Transaction routes are no longer exposed here; consumers must call the Wallet Service directly for transactions and balance.
 
 ## Security
 
 - All routes (except `/api/auth` and `/api/users` POST) require JWT authentication
 - Passwords are hashed using bcrypt
-- Internal communication between services uses a different JWT key (`JWT_SECRET_INTERNAL`)
-- Input validation on all endpoints
-- External routes use `PRIVATE_KEY` (ILIACHALLENGE)
-- Internal routes use `PRIVATE_KEY_INTERNAL` (ILIACHALLENGE_INTERNAL)
+- Internal communication with Wallet uses `PRIVATE_KEY_INTERNAL` (`ILIACHALLENGE_INTERNAL`)
+- Input validation on all endpoints (express-validator)
+
+## Tests
+
+Integration tests (sqlite in-memory, wallet client mocked):
+```bash
+npm test
+```
 
 ## Project Structure
 
@@ -245,13 +200,14 @@ Transaction endpoints in the Users Service act as a proxy, forwarding requests t
 users-service/
 ├── src/
 │   ├── config/          # Database configuration
-│   ├── controllers/      # HTTP controllers
-│   ├── middleware/       # Middlewares (auth, validators)
-│   ├── migrations/       # Database migrations
-│   ├── models/           # Sequelize models
-│   ├── routes/           # Route definitions
-│   ├── services/         # Business logic
-│   └── utils/            # Utilities
+│   ├── controllers/     # HTTP controllers
+│   ├── middleware/      # Middlewares (auth, validators)
+│   ├── migrations/      # Database migrations
+│   ├── models/          # Sequelize models
+│   ├── routes/          # Route definitions
+│   ├── services/        # Business logic
+│   └── utils/           # Utilities
+├── __tests__/           # Integration tests (jest + supertest)
 ├── Dockerfile
 ├── package.json
 └── README.md

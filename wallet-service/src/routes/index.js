@@ -1,12 +1,35 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateInternalToken } = require('../middleware/auth');
+const { authenticateToken, authenticateInternalToken } = require('../middleware/auth');
 const { 
+  validateCreateTransaction,
   validateCreateTransactionInternal,
   validateGetTransactions,
+  validateGetTransactionsInternal,
   validateGetBalance
 } = require('../middleware/validators');
 const transactionController = require('../controllers/TransactionController');
+
+// External routes (client-facing)
+router.post(
+  '/transactions',
+  authenticateToken,
+  ...validateCreateTransaction,
+  transactionController.createTransaction.bind(transactionController)
+);
+
+router.get(
+  '/transactions',
+  authenticateToken,
+  ...validateGetTransactions,
+  transactionController.getTransactions.bind(transactionController)
+);
+
+router.get(
+  '/balance',
+  authenticateToken,
+  transactionController.getBalance.bind(transactionController)
+);
 
 // Internal routes (service-to-service communication)
 router.post(
@@ -19,7 +42,7 @@ router.post(
 router.get(
   '/internal/transactions',
   authenticateInternalToken,
-  ...validateGetTransactions,
+  ...validateGetTransactionsInternal,
   transactionController.getTransactionsInternal.bind(transactionController)
 );
 

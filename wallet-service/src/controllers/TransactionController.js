@@ -1,11 +1,12 @@
 const transactionService = require('../services/TransactionService');
+const { AppError } = require('../errors');
 
 class TransactionController {
   /**
    * Creates a new transaction
    * POST /transactions
    */
-  async createTransaction(req, res) {
+  async createTransaction(req, res, next) {
     try {
       const { user_id, type, amount } = req.body;
 
@@ -23,14 +24,7 @@ class TransactionController {
         amount: parseInt(transaction.amount),
       });
     } catch (error) {
-      console.error('Error creating transaction:', error);
-      
-      // Handle insufficient balance error
-      if (error.message === 'Insufficient balance') {
-        return res.status(400).json({ error: 'Insufficient balance' });
-      }
-      
-      res.status(500).json({ error: 'Internal server error' });
+      return next(error);
     }
   }
 
@@ -38,7 +32,7 @@ class TransactionController {
    * Lists user transactions
    * GET /transactions?type=CREDIT|DEBIT
    */
-  async getTransactions(req, res) {
+  async getTransactions(req, res, next) {
     try {
       const { type } = req.query;
       const userId = req.user?.userId || req.user?.id;
@@ -55,8 +49,7 @@ class TransactionController {
 
       res.status(200).json(formattedTransactions);
     } catch (error) {
-      console.error('Error getting transactions:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      return next(error);
     }
   }
 
@@ -64,7 +57,7 @@ class TransactionController {
    * Returns user consolidated balance
    * GET /balance
    */
-  async getBalance(req, res) {
+  async getBalance(req, res, next) {
     try {
       const userId = req.user?.userId || req.user?.id;
 
@@ -74,8 +67,7 @@ class TransactionController {
         amount: parseInt(balance),
       });
     } catch (error) {
-      console.error('Error getting balance:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      return next(error);
     }
   }
 
@@ -84,7 +76,7 @@ class TransactionController {
    * POST /internal/transactions
    * Receives internal call from other services
    */
-  async createTransactionInternal(req, res) {
+  async createTransactionInternal(req, res, next) {
     try {
       const { userId, type, amount, description } = req.body;
 
@@ -102,14 +94,7 @@ class TransactionController {
         amount: parseInt(transaction.amount),
       });
     } catch (error) {
-      console.error('Error creating transaction (internal):', error);
-      
-      // Handle insufficient balance error
-      if (error.message === 'Insufficient balance') {
-        return res.status(400).json({ error: 'Insufficient balance' });
-      }
-      
-      res.status(500).json({ error: 'Internal server error' });
+      return next(error);
     }
   }
 
@@ -118,12 +103,12 @@ class TransactionController {
    * GET /internal/transactions
    * Receives internal call from other services
    */
-  async getTransactionsInternal(req, res) {
+  async getTransactionsInternal(req, res, next) {
     try {
       const { userId, type } = req.query;
 
       if (!userId) {
-        return res.status(400).json({ error: 'userId is required' });
+        throw new AppError('userId is required', 400);
       }
 
       const transactions = await transactionService.getTransactions(userId, type);
@@ -138,8 +123,7 @@ class TransactionController {
 
       res.status(200).json(formattedTransactions);
     } catch (error) {
-      console.error('Error getting transactions (internal):', error);
-      res.status(500).json({ error: 'Internal server error' });
+      return next(error);
     }
   }
 
@@ -148,12 +132,12 @@ class TransactionController {
    * GET /internal/balance
    * Receives internal call from other services
    */
-  async getBalanceInternal(req, res) {
+  async getBalanceInternal(req, res, next) {
     try {
       const { userId } = req.query;
 
       if (!userId) {
-        return res.status(400).json({ error: 'userId is required' });
+        throw new AppError('userId is required', 400);
       }
 
       const balance = await transactionService.getBalance(userId);
@@ -162,8 +146,7 @@ class TransactionController {
         amount: parseInt(balance),
       });
     } catch (error) {
-      console.error('Error getting balance (internal):', error);
-      res.status(500).json({ error: 'Internal server error' });
+      return next(error);
     }
   }
 }
