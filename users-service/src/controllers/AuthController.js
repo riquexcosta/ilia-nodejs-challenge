@@ -6,7 +6,7 @@ class AuthController {
    * Authenticates a user and returns JWT token
    * POST /auth
    */
-  async authenticate(req, res) {
+  async authenticate(req, res, next) {
     try {
       const { email, password } = req.body;
 
@@ -28,13 +28,7 @@ class AuthController {
         access_token: token,
       });
     } catch (error) {
-      console.error('Error authenticating user:', error);
-      
-      if (error.message === 'Invalid credentials') {
-        return res.status(401).json({ error: 'Invalid credentials' });
-      }
-      
-      res.status(500).json({ error: 'Internal server error' });
+      return next(error);
     }
   }
 }

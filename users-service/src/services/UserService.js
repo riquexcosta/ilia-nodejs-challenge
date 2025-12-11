@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const bcrypt = require('bcrypt');
 const walletClient = require('./WalletClient');
+const { ConflictError, NotFoundError, InvalidCredentialsError } = require('../errors');
 
 class UserService {
   /**
@@ -15,7 +16,7 @@ class UserService {
     // Check if email already exists
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
-      throw new Error('Email already exists');
+      throw new ConflictError('Email already exists');
     }
 
     // Hash password
@@ -71,14 +72,14 @@ class UserService {
     const user = await User.findByPk(id);
     
     if (!user) {
-      throw new Error('User not found');
+      throw new NotFoundError('User not found');
     }
 
     // If email is being updated, check if it already exists
     if (updateData.email && updateData.email !== user.email) {
       const existingUser = await User.findOne({ where: { email: updateData.email } });
       if (existingUser) {
-        throw new Error('Email already exists');
+          throw new ConflictError('Email already exists');
       }
     }
 
@@ -108,7 +109,7 @@ class UserService {
     const user = await User.findByPk(id);
     
     if (!user) {
-      throw new Error('User not found');
+      throw new NotFoundError('User not found');
     }
 
     await user.destroy();
@@ -125,13 +126,13 @@ class UserService {
     const user = await User.findOne({ where: { email } });
     
     if (!user) {
-      throw new Error('Invalid credentials');
+      throw new InvalidCredentialsError('Invalid credentials');
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     
     if (!isPasswordValid) {
-      throw new Error('Invalid credentials');
+      throw new InvalidCredentialsError('Invalid credentials');
     }
 
     return user;

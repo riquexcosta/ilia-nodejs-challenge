@@ -2,6 +2,7 @@ const Transaction = require('../models/Transaction');
 const Wallet = require('../models/Wallet');
 const { sequelize } = require('../database');
 const { QueryTypes } = require('sequelize');
+const { InsufficientBalanceError } = require('../errors');
 
 class TransactionService {
   /**
@@ -34,7 +35,7 @@ class TransactionService {
       if (type.toUpperCase() === 'DEBIT') {
         const currentBalance = parseFloat(wallet.balance);
         if (currentBalance < parseFloat(amount)) {
-          throw new Error('Insufficient balance');
+          throw new InsufficientBalanceError();
         }
       }
 
@@ -100,21 +101,26 @@ class TransactionService {
       return 0;
     }
 
-    const credit = await Transaction.sum('amount', {
-      where: {
-        walletId: wallet.id,
-        type: 'CREDIT',
-      },
-    });
-  
-    const debit = await Transaction.sum('amount', {
-      where: {
-        walletId: wallet.id,
-        type: 'DEBIT',
-      },
-    });
-  
-    return parseFloat(credit || 0) - parseFloat(debit || 0);
+    // Single aggregation query to avoid multiple round-trips
+    const result = await sequelize.query(
+      `
+        SELECT COALESCE(SUM(
+          CASE 
+            WHEN type = 'CREDIT' THEN amount 
+            WHEN type = 'DEBIT' THEN -amount 
+            ELSE 0
+          END
+        ), 0) AS balance
+        FROM transactions
+        WHERE wallet_id = :walletId
+      `,
+      {
+        replacements: { walletId: wallet.id },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    return parseFloat(result[0]?.balance || 0);
   }
 }
 

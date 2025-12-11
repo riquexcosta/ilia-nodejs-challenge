@@ -1,17 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateToken, authExternal } = require('../middleware/auth');
+const { authenticateToken } = require('../middleware/auth');
 const { 
   validateCreateUser,
   validateUpdateUser,
   validateAuth,
-  validateUserId,
-  validateCreateTransaction,
-  validateGetTransactions
+  validateUserId
 } = require('../middleware/validators');
 const userController = require('../controllers/UserController');
 const authController = require('../controllers/AuthController');
-const transactionController = require('../controllers/TransactionController');
 
 // Authentication routes (no JWT authentication required)
 router.post(
@@ -56,27 +53,6 @@ router.delete(
   authenticateToken,
   ...validateUserId,
   userController.deleteUser.bind(userController)
-);
-
-// Transaction routes
-router.post(
-  '/transactions',
-  authExternal,
-  ...validateCreateTransaction,
-  transactionController.createTransaction.bind(transactionController)
-);
-
-router.get(
-  '/transactions',
-  authExternal,
-  ...validateGetTransactions,
-  transactionController.getTransactions.bind(transactionController)
-);
-
-router.get(
-  '/balance',
-  authExternal,
-  transactionController.getBalance.bind(transactionController)
 );
 
 module.exports = router;

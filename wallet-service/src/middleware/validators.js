@@ -15,6 +15,47 @@ const handleValidationErrors = (req, res, next) => {
 };
 
 /**
+ * Validation rules for external transaction creation
+ */
+const validateCreateTransaction = [
+  body('user_id')
+    .notEmpty()
+    .withMessage('user_id is required')
+    .isString()
+    .withMessage('user_id must be a string')
+    .trim()
+    .notEmpty()
+    .withMessage('user_id must be a non-empty string'),
+
+  body('type')
+    .notEmpty()
+    .withMessage('type is required')
+    .isIn(['CREDIT', 'DEBIT'])
+    .withMessage('type must be CREDIT or DEBIT'),
+
+  body('amount')
+    .notEmpty()
+    .withMessage('amount is required')
+    .custom((value) => {
+      const num = typeof value === 'string' ? parseFloat(value) : value;
+      if (isNaN(num) || typeof num !== 'number') {
+        throw new Error('amount must be a number');
+      }
+      if (num <= 0) {
+        throw new Error('amount must be a positive number');
+      }
+      return true;
+    }),
+
+  body('description')
+    .optional()
+    .isString()
+    .withMessage('description must be a string'),
+
+  handleValidationErrors,
+];
+
+/**
  * Validation rules for internal transaction creation
  */
 const validateCreateTransactionInternal = [
@@ -56,9 +97,21 @@ const validateCreateTransactionInternal = [
 ];
 
 /**
- * Validation rules for transaction listing query params
+ * Validation rules for external transaction listing query params
  */
 const validateGetTransactions = [
+  query('type')
+    .optional()
+    .isIn(['CREDIT', 'DEBIT'])
+    .withMessage('type must be CREDIT or DEBIT'),
+  
+  handleValidationErrors,
+];
+
+/**
+ * Validation rules for internal transaction listing query params
+ */
+const validateGetTransactionsInternal = [
   query('type')
     .optional()
     .isIn(['CREDIT', 'DEBIT'])
@@ -93,7 +146,9 @@ const validateGetBalance = [
 ];
 
 module.exports = {
+  validateCreateTransaction,
   validateCreateTransactionInternal,
   validateGetTransactions,
+  validateGetTransactionsInternal,
   validateGetBalance,
 };
